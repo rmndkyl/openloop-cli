@@ -29,7 +29,7 @@ if you already have account you can put `access-token` to `token.txt`,
 
 put your proxy in file `proxy.txt` format `http://username:pass@ip:port`
 
-![intro](image-1.png)
+![intro](https://github.com/user-attachments/assets/862c4732-9235-4514-aaa5-da205808fd3f)
 
 ## Setup
 
