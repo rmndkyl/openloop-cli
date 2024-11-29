@@ -51,6 +51,14 @@ put your proxy in file `proxy.txt` format `http://username:pass@ip:port`
    npm run start
    ```
 
+## ☕️ Traktir kopinya & Thanks for Supporting us:
+
+- https://sociabuzz.com/layerairdrop/tribe
+- https://saweria.co/LayerAirdrop
+- https://trakteer.id/layerairdrop/tip
+- **EVM : `0x3E0BD1156172c03E497157838f218CDF77Ab2885`**
+- **SOLANA : `4DMvckFnSrm7fymVaPrXULrCq4h1yvfTWq5aHXLpLKsn`**
+
 ## ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 
 This project is licensed under the [MIT License](LICENSE).
