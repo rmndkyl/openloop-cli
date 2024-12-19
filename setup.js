@@ -38,17 +38,17 @@ const loginUser = async (email, password) => {
 
             fs.writeFileSync('token.txt', accessToken + '\n', 'utf8');
             logger('Access token saved to token.txt');
-            return; 
+            return;
         } catch (error) {
             attempt++;
             logger(`Login attempt ${attempt} failed for email: ${email}. Error: ${error.message}`, 'error');
 
             if (attempt >= maxRetries) {
                 logger(`Max retries reached for login. Aborting...`, 'error');
-                return; 
+                return;
             }
 
-            await new Promise((resolve) => setTimeout(resolve, 1000)); 
+            await new Promise((resolve) => setTimeout(resolve, 1000));
         }
     }
 };
@@ -80,7 +80,7 @@ const registerUser = async () => {
             if (registerResponse.status === 401) {
                 logger('Email already exists. Attempting to login...');
                 await loginUser(email, password);
-                return; 
+                return;
             }
 
             if (!registerResponse.ok) {
@@ -90,7 +90,7 @@ const registerUser = async () => {
             const registerData = await registerResponse.json();
             logger('Registration successful:', 'success', registerData.message);
 
-            await loginUser(email, password); 
+            await loginUser(email, password);
             return;
         } catch (error) {
             attempt++;
@@ -98,10 +98,10 @@ const registerUser = async () => {
 
             if (attempt >= maxRetries) {
                 logger('Max retries reached for registration/login. Aborting...', 'error');
-                return; 
+                return;
             }
 
-            await new Promise((resolve) => setTimeout(resolve, 1000)); 
+            await new Promise((resolve) => setTimeout(resolve, 1000));
         }
     }
 };
