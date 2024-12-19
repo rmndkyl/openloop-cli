@@ -4,7 +4,6 @@ import chalk from 'chalk';
 import { HttpsProxyAgent } from 'https-proxy-agent';
 import { banner } from './utils/banner.js';
 import { logger } from './utils/logger.js';
-
 const getRandomQuality = () => {
     return Math.floor(Math.random() * (99 - 60 + 1)) + 60;
 };
@@ -18,9 +17,9 @@ const getTokens = () => {
 };
 
 const shareBandwidth = async (token, proxy) => {
-    const quality = getRandomQuality(); 
+    const quality = getRandomQuality();
     const proxyAgent = new HttpsProxyAgent(proxy);
-    const maxRetries = 5; 
+    const maxRetries = 5;
     let attempt = 0;
 
     while (attempt < maxRetries) {
@@ -51,56 +50,20 @@ const shareBandwidth = async (token, proxy) => {
             };
 
             logBandwidthShareResponse(data);
-            return; 
+            return;
         } catch (error) {
             attempt++;
             if (attempt >= maxRetries) {
                 logger(`Max retries reached. Skipping.`, 'error');
             } else {
-                await new Promise((resolve) => setTimeout(resolve, 1000)); 
+                await new Promise((resolve) => setTimeout(resolve, 1000));
             }
         }
     }
 };
 
-const shareBandwidthForAllTokens = async () => {
-    const tokens = getTokens();
-    const proxies = getProxies();
+let intervalId;
 
-    if (tokens.length !== proxies.length) {
-        logger('The number of tokens and proxies do not match!', 'error');
-        return;
-    }
-
-    for (let i = 0; i < tokens.length; i++) {
-        const token = tokens[i];
-        const proxy = proxies[i];
-        try {
-            const response = await checkMissions(token, proxy);
-            if (response && Array.isArray(response.missions)) {
-                const availableMissionIds = response.missions
-                    .filter(mission => mission.status === 'available')
-                    .map(mission => mission.missionId);
-
-                logger('Available Missions:', 'info', availableMissionIds.length);
-                for (const missionId of availableMissionIds) {
-                    logger(`Do and complete mission Id: ${missionId}`, 'info');
-                    const completeMission = await doMissions(missionId, token, proxy)
-
-                    logger(`Mission Id: ${missionId} Complete: ${completeMission.message}`)
-                }
-            }
-        } catch (error) {
-            logger('Error checking missions:', 'error', error);
-        };
-
-        try {
-            await shareBandwidth(token, proxy);
-        } catch (error) {
-            logger(`Error processing token: ${token}, Error: ${error.message}`, 'error');
-        }
-    }
-};
 const checkMissions = async (token, proxy) => {
     try {
         const proxyAgent = new HttpsProxyAgent(proxy);
@@ -111,20 +74,65 @@ const checkMissions = async (token, proxy) => {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json',
             },
-            agent: proxyAgent,  
+            agent: proxyAgent,
         });
 
-        if (!response.ok) {
-            throw new Error(`Failed to Fetch Missions! Status: ${response.statusText}`);
+        if (response.status === 401) {
+            logger('Token is expired. Trying to get a new token...', 'warn');
+            clearInterval(intervalId);
+
+            await getToken();
+            restartInterval();
+            return null;
+        } else if (!response.ok) {
+            throw new Error(`Failed to fetch missions! Status: ${response.statusText}`);
         }
 
         const data = await response.json();
         return data.data;
 
     } catch (error) {
-        logger('Error Fetch Missions!', 'error', error.message);
+        logger('Error Fetching Missions!', 'error', error);
     }
 };
+
+const restartInterval = () => {
+    intervalId = setInterval(shareBandwidthForAllTokens, 60 * 1000);
+};
+
+const shareBandwidthForAllTokens = async () => {
+    const tokens = getTokens();
+    const proxies = getProxies();
+
+    for (let i = 0; i < tokens.length; i++) {
+        const token = tokens[i];
+        const proxy = proxies[i % proxies.length];
+        try {
+            const response = await checkMissions(token, proxy);
+            if (response && Array.isArray(response.missions)) {
+                const availableMissionIds = response.missions
+                    .filter(mission => mission.status === 'available')
+                    .map(mission => mission.missionId);
+
+                logger('Available Missions:', 'info', availableMissionIds.length);
+                for (const missionId of availableMissionIds) {
+                    logger(`Do and complete mission Id: ${missionId}`, 'info');
+                    const completeMission = await doMissions(missionId, token, proxy);
+                    logger(`Mission Id: ${missionId} Complete: ${completeMission.message}`);
+                }
+            }
+        } catch (error) {
+            logger('Error checking missions:', 'error', error);
+        }
+
+        try {
+            await shareBandwidth(token, proxy);
+        } catch (error) {
+            logger(`Error processing token: ${token}, Error: ${error.message}`, 'error');
+        }
+    }
+};
+
 const doMissions = async (missionId, token, proxy) => {
     try {
         const proxyAgent = new HttpsProxyAgent(proxy);
@@ -135,7 +143,7 @@ const doMissions = async (missionId, token, proxy) => {
                 'Authorization': `Bearer ${token}`,
                 'Content-Type': 'application/json',
             },
-            agent: proxyAgent,  
+            agent: proxyAgent,
         });
 
         if (!response.ok) {
@@ -146,14 +154,16 @@ const doMissions = async (missionId, token, proxy) => {
         return data;
 
     } catch (error) {
-        logger('Error Complete Missions!', 'error', error.message);
+        logger('Error Complete Missions!', 'error', error);
     }
 };
+
 const main = () => {
     logger(banner, 'debug');
     logger('Starting bandwidth sharing each minute...');
-    shareBandwidthForAllTokens(); 
-    setInterval(shareBandwidthForAllTokens, 60 * 1000); 
+    shareBandwidthForAllTokens();
+
+    intervalId = setInterval(shareBandwidthForAllTokens, 60 * 1000);
 };
 
 main();
